@@ -1,0 +1,6 @@
+epochs: 5
+batch_size: 16
+learning_rate: 0.00002
+patience: 2
+max_len: 256
+grad_clip: 1.0

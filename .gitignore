@@ -1,0 +1,37 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.DS_Store
+
+# Local model artifacts and caches
+models/
+checkpoints/
+cache/
+.cache/
+*.db
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Data and experiment caches
+data/**/*.cache
+data/**/*.tmp
+data/**/.cache/
+results/*.pt
+results/*.pth
+models_out/
+models_cache/
+huggingface_cache/
+
+# Frontend dependencies
+node_modules/

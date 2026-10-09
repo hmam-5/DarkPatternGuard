@@ -1,0 +1,9 @@
+epochs: 10
+batch_size: 32
+learning_rate: 0.001
+patience: 3
+max_len: 256
+embedding_dim: 100
+filters: 100
+dropout: 0.5
+grad_clip: 1.0

@@ -1,0 +1,1 @@
+"""DarkPatternGuard application package."""

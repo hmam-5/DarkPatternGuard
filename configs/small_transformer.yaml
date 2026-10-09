@@ -1,0 +1,11 @@
+epochs: 10
+batch_size: 32
+learning_rate: 0.0003
+patience: 3
+max_len: 256
+embedding_dim: 256
+layers: 4
+heads: 8
+dropout: 0.1
+vocab_size: 16000
+grad_clip: 1.0

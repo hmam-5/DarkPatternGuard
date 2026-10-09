@@ -1,0 +1,74 @@
+{
+  "classification_report": {
+    "Normal": {
+      "f1-score": 0.6666666666666666,
+      "precision": 0.5,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "Scarcity": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "Social Proof": {
+      "f1-score": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5.0
+    },
+    "Urgency": {
+      "f1-score": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "support": 5.0
+    },
+    "accuracy": 0.75,
+    "macro avg": {
+      "f1-score": 0.6666666666666666,
+      "precision": 0.625,
+      "recall": 0.75,
+      "support": 20.0
+    },
+    "weighted avg": {
+      "f1-score": 0.6666666666666666,
+      "precision": 0.625,
+      "recall": 0.75,
+      "support": 20.0
+    }
+  },
+  "ece": 0.46721002608537676,
+  "macro_f1": 0.6666666666666666,
+  "macro_f1_bootstrap_95_ci": {
+    "lower": 0.5714285714285714,
+    "upper": 0.725
+  },
+  "micro_f1": 0.75,
+  "per_class": {
+    "Normal": {
+      "f1": 0.6666666666666666,
+      "precision": 0.5,
+      "recall": 1.0,
+      "support": 5
+    },
+    "Scarcity": {
+      "f1": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5
+    },
+    "Social Proof": {
+      "f1": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 5
+    },
+    "Urgency": {
+      "f1": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "support": 5
+    }
+  }
+}

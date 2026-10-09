@@ -1,0 +1,20 @@
+seed: 1729
+seeds:
+  - 1729
+  - 2718
+  - 3141
+numpy_seed: 1729
+torch_seed: 1729
+
+paths:
+  raw_data: data/raw
+  cleaned_data: data/cleaned
+  results: results
+
+labels:
+  urgency: Urgency
+  scarcity: Scarcity
+  social_proof: Social Proof
+  normal: Normal
+
+max_len: 256
