@@ -69,6 +69,7 @@ def test_dry_run_requires_no_api_call(tmp_path: Path, monkeypatch) -> None:
     data_dir.mkdir()
     frame = pd.DataFrame({"text": ["100% cotton shirt"] * 4, "label": ["Normal"] * 4})
     frame.to_csv(data_dir / "train.csv", index=False)
+    frame.to_csv(data_dir / "val.csv", index=False)
     frame.to_csv(data_dir / "test.csv", index=False)
     from models import llm
 
@@ -81,3 +82,4 @@ def test_dry_run_requires_no_api_call(tmp_path: Path, monkeypatch) -> None:
         dry_run=True,
     )
     assert (tmp_path / "results/llm_gpt4o_mini/seed1729/preds.csv").is_file()
+    assert (tmp_path / "results/llm_gpt4o_mini/seed1729/val_preds.csv").is_file()

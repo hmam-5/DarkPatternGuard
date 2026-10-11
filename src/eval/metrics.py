@@ -170,6 +170,32 @@ def save_confusion_matrix(
     plt.close(figure)
 
 
+def save_prediction_csv(
+    output_path: Path,
+    identifiers: list[str] | np.ndarray,
+    y_true: list[str] | np.ndarray,
+    probabilities: np.ndarray,
+) -> None:
+    """Write standardized probabilities without replacing split metrics."""
+    probabilities = np.asarray(probabilities, dtype=float)
+    if probabilities.shape != (len(identifiers), len(PROBABILITY_COLUMNS)):
+        raise ValueError("Prediction probabilities do not match the identifiers")
+    if len(y_true) != len(identifiers):
+        raise ValueError("Prediction labels do not match the identifiers")
+    frame = {
+        "id": identifiers,
+        "true_label": y_true,
+        **{
+            column: probabilities[:, index]
+            for index, column in enumerate(PROBABILITY_COLUMNS)
+        },
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    import pandas as pd
+
+    pd.DataFrame(frame).to_csv(output_path, index=False)
+
+
 def save_prediction_artifacts(
     output_dir: Path,
     identifiers: list[str] | np.ndarray,
@@ -180,18 +206,8 @@ def save_prediction_artifacts(
     """Write standardized predictions, metrics, and confusion matrix."""
     probabilities = np.asarray(probabilities, dtype=float)
     predicted = np.asarray(LABELS)[probabilities.argmax(axis=1)]
-    frame = {
-        "id": identifiers,
-        "true_label": y_true,
-        **{
-            column: probabilities[:, index]
-            for index, column in enumerate(PROBABILITY_COLUMNS)
-        },
-    }
     output_dir.mkdir(parents=True, exist_ok=True)
-    import pandas as pd
-
-    pd.DataFrame(frame).to_csv(output_dir / "preds.csv", index=False)
+    save_prediction_csv(output_dir / "preds.csv", identifiers, y_true, probabilities)
     metrics = compute_metrics(y_true, predicted, probabilities, seed=seed)
     (output_dir / "metrics.json").write_text(
         json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8"

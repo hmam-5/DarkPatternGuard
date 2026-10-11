@@ -10,8 +10,20 @@ from threading import Lock
 from typing import Any
 
 import numpy as np
+import pandas as pd
+from sklearn.metrics import f1_score
 
 LABELS = ("Urgency", "Scarcity", "Social Proof", "Normal")
+PROBABILITY_COLUMNS = (
+    "prob_Urgency",
+    "prob_Scarcity",
+    "prob_Social_Proof",
+    "prob_Normal",
+)
+TRANSFORMER_MODELS = {
+    "finetune_bert": "bert-base-uncased",
+    "finetune_deberta": "microsoft/deberta-v3-base",
+}
 
 
 @dataclass
@@ -23,11 +35,43 @@ class Prediction:
     top_words: list[str]
 
 
+@dataclass
+class _TransformerArtifact:
+    """A trained CPU transformer and its tokenizer."""
+
+    model: Any
+    tokenizer: Any
+
+    def predict(self, text: str) -> Prediction:
+        """Run inference using the trained model's four-class probabilities."""
+        import torch
+
+        encoded = self.tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=256,
+        )
+        with torch.inference_mode():
+            logits = self.model(**encoded).logits
+            probabilities = torch.softmax(logits, dim=1)[0].cpu().numpy()
+        return Prediction(
+            label=LABELS[int(probabilities.argmax())],
+            probabilities=dict(zip(LABELS, probabilities.tolist(), strict=True)),
+            top_words=[],
+        )
+
+
 class ModelRegistry:
     """Load serving models once and expose a uniform prediction interface."""
 
-    def __init__(self, results_dir: Path = Path("results")) -> None:
+    def __init__(
+        self,
+        results_dir: Path = Path("results"),
+        models_dir: Path = Path("models_out"),
+    ) -> None:
         self.results_dir = results_dir
+        self.models_dir = models_dir
         self.use_llm = os.getenv("USE_LLM_IN_API", "false").lower() == "true"
         self._loaded = False
         self._models: dict[str, Any] = {}
@@ -36,14 +80,105 @@ class ModelRegistry:
         """Load CPU-only serving components once at application startup."""
         if self._loaded:
             return
-        self._models = {
-            "logistic_regression": self._load_optional("logistic_regression"),
-            "lightgbm": self._load_optional("lightgbm"),
-            "distilbert": self._load_optional("distilbert"),
-        }
-        if self.use_llm:
-            self._models["gpt-4o-mini"] = self._load_optional("llm_gpt4o_mini")
+        candidate = self._best_transformer_candidate()
+        if candidate is not None:
+            model_name, seed = candidate
+            self._models[model_name] = self._load_transformer(model_name, seed)
+        elif (self.results_dir / "leaderboard.csv").is_file():
+            raise FileNotFoundError(
+                "A benchmark leaderboard exists, but no trained transformer "
+                "checkpoint with validation predictions is available to serve."
+            )
+        else:
+            self._models = {
+                "logistic_regression": self._load_optional("logistic_regression"),
+                "lightgbm": self._load_optional("lightgbm"),
+                "distilbert": self._load_optional("distilbert"),
+            }
+            if self.use_llm:
+                self._models["gpt-4o-mini"] = self._load_optional("llm_gpt4o_mini")
         self._loaded = True
+
+    def _best_transformer_candidate(self) -> tuple[str, int] | None:
+        """Select the seed/model with the highest validation Macro-F1."""
+        candidates: list[tuple[float, str, int]] = []
+        for model_name in TRANSFORMER_MODELS:
+            model_results = self.results_dir / model_name
+            for seed_dir in sorted(model_results.glob("seed*")):
+                if not seed_dir.name.startswith("seed"):
+                    continue
+                try:
+                    seed = int(seed_dir.name.removeprefix("seed"))
+                except ValueError:
+                    continue
+                validation_path = seed_dir / "val_preds.csv"
+                weights_path = (
+                    self.models_dir
+                    / model_name
+                    / f"seed{seed}.weights.pt"
+                )
+                if not validation_path.is_file():
+                    continue
+                if not weights_path.is_file():
+                    raise FileNotFoundError(
+                        f"Validation predictions exist without serving weights: "
+                        f"{weights_path}"
+                    )
+                frame = pd.read_csv(validation_path)
+                required_columns = {"true_label", *PROBABILITY_COLUMNS}
+                if frame.empty or not required_columns.issubset(frame.columns):
+                    raise ValueError(
+                        f"Invalid validation prediction file: {validation_path}"
+                    )
+                probabilities = frame.loc[:, PROBABILITY_COLUMNS].to_numpy(
+                    dtype=float
+                )
+                if not np.isfinite(probabilities).all():
+                    raise ValueError(
+                        f"Non-finite validation probabilities: {validation_path}"
+                    )
+                predicted = np.asarray(LABELS)[probabilities.argmax(axis=1)]
+                score = float(
+                    f1_score(
+                        frame["true_label"],
+                        predicted,
+                        labels=LABELS,
+                        average="macro",
+                        zero_division=0,
+                    )
+                )
+                candidates.append((score, model_name, seed))
+        if not candidates:
+            return None
+        _, model_name, seed = max(
+            candidates, key=lambda item: (item[0], item[1], -item[2])
+        )
+        return model_name, seed
+
+    def _load_transformer(self, model_name: str, seed: int) -> _TransformerArtifact:
+        """Load a locally cached base model and its D:-backed trained weights."""
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        model_id = TRANSFORMER_MODELS[model_name]
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            local_files_only=True,
+            use_fast=False,
+        )
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_id,
+            num_labels=len(LABELS),
+            id2label=dict(enumerate(LABELS)),
+            label2id={label: index for index, label in enumerate(LABELS)},
+            local_files_only=True,
+        )
+        weights_path = self.models_dir / model_name / f"seed{seed}.weights.pt"
+        model.load_state_dict(
+            torch.load(weights_path, map_location="cpu", weights_only=True)
+        )
+        model.eval()
+        return _TransformerArtifact(model=model, tokenizer=tokenizer)
 
     def _load_optional(self, name: str) -> Any:
         """Return a persisted model when available, otherwise a safe fallback."""
@@ -63,7 +198,12 @@ class ModelRegistry:
         self.load()
         predictions = {}
         for name in self._models:
-            predictions[name] = self._fallback_prediction(text, name)
+            model = self._models[name]
+            predictions[name] = (
+                model.predict(text)
+                if isinstance(model, _TransformerArtifact)
+                else self._fallback_prediction(text, name)
+            )
         return predictions
 
     def _fallback_prediction(self, text: str, model_name: str) -> Prediction:
@@ -128,8 +268,9 @@ class ModelRegistry:
             return [
                 {
                     "model": row.get("model", ""),
-                    "version": "saved",
+                    "version": "trained",
                     "macro_f1": row.get("mean_macro_f1"),
+                    "active": row.get("model", "") in self.active_models,
                 }
                 for row in frame.to_dict(orient="records")
             ]

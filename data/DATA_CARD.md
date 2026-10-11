@@ -1,50 +1,33 @@
 # DarkPatternGuard data card
 
-## Summary
+The raw source is the `dataset/dataset.tsv` release from [yamanalab/ec-darkpattern](https://github.com/yamanalab/ec-darkpattern), pinned to commit `85ea9df31928d5ad6ea0b106316b441c201adbbe`. Its README describes the dark-pattern examples as originating from Mathur et al. (2019) and its Normal examples as non-dark e-commerce segments collected from the same sites. The repository includes an Apache-2.0 license.
 
-This project uses the Princeton University e-commerce dark-pattern dataset
-provided for the NLP course. Raw exports belong in `data/raw/` and are not
-downloaded by the repository. The cleaned dataset is produced by
-`src/data/clean.py` and split by `src/data/split.py`.
+- Total rows: 2,029
+- Seed: 1729
+- Unique source IDs: 956
+- Synthetic rows: 0
+- Split by source page to reduce page-level leakage.
+- Labels: Normal, Scarcity, Social Proof, Urgency
 
-The card is a tracked provenance template when no local raw data is present.
-After running `make data`, replace the generated counts below with the
-splitter's observed counts and retain the generated manifest as the
-authoritative machine-readable record.
+## Grouped split sizes
 
-## Intended use
+| Split | Rows |
+| --- | ---: |
+| Train | 1,610 |
+| Val | 200 |
+| Test | 219 |
 
-The data supports research and classroom evaluation of four-way e-commerce text
-classification: `Urgency`, `Scarcity`, `Social Proof`, and `Normal`. It is not
-intended as a consumer-facing claim that any particular phrase is legally
-deceptive.
+## Class distribution
 
-## Processing
+| Label | Count | Weight |
+| --- | ---: | ---: |
+| Normal | 1163 | 0.436156 |
+| Scarcity | 349 | 1.453438 |
+| Social Proof | 312 | 1.625801 |
+| Urgency | 205 | 2.474390 |
 
-Unicode NFKC normalization, HTML removal, URL removal, lowercasing, whitespace
-normalization, empty-row filtering, and SHA-256 exact deduplication are applied
-before a deterministic stratified 80/10/10 split. Labels are normalized to the
-four canonical names. Neutral examples are injected only when `Normal` is
-missing or below the 25% balancing threshold; injected rows are marked
-`is_synthetic=true`.
+Only Urgency, Scarcity, Social Proof, and `Not Dark Pattern` records are retained; `Not Dark Pattern` maps to Normal. Other source categories are excluded. Original text and source-page/category metadata remain available in the raw JSON; the cleaner records the source ID and category in the cleaned CSV. No synthetic examples were added when genuine Normal examples met the balancing threshold.
 
-## Distribution
+## Citation
 
-| Partition | Rows | Urgency | Scarcity | Social Proof | Normal |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Train | generated locally | generated locally | generated locally | generated locally | generated locally |
-| Validation | generated locally | generated locally | generated locally | generated locally | generated locally |
-| Test | generated locally | generated locally | generated locally | generated locally | generated locally |
-
-Run `make data` to populate the authoritative counts in
-`data/cleaned/splits_manifest.json`. The fixed seeds are `1729`, `2718`, and
-`3141` for model runs, with `1729` as the split seed.
-
-## Limitations and risks
-
-Scraped e-commerce language can reflect retailer, category, language, and time
-period bias. Synthetic Normal examples improve class coverage but are not a
-replacement for naturally sampled neutral text. Annotation ambiguity between
-urgency and scarcity can lower agreement. Results should therefore be reported
-with per-class metrics, confusion matrices, calibration, and bootstrap
-confidence intervals rather than accuracy alone.
+Yada et al., *Dark patterns in e-commerce: a dataset and its baseline evaluations* (2022). The dataset is derived in part from Mathur et al., *Dark Patterns at Scale* (2019).

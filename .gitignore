@@ -11,12 +11,14 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+desktop.ini
 
 # Local model artifacts and caches
 models/
 checkpoints/
 cache/
 .cache/
+.cache_d/
 *.db
 *.pt
 *.pth

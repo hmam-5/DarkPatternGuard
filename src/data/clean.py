@@ -92,12 +92,22 @@ def _text_from_record(record: dict[str, Any]) -> Any:
     return None
 
 
-def _row(text: str, label: str, is_synthetic: bool = False) -> dict[str, Any]:
+def _row(
+    text: str,
+    label: str,
+    is_synthetic: bool = False,
+    source_id: Any = None,
+    source_category: Any = None,
+    source_dataset: Any = None,
+) -> dict[str, Any]:
     return {
         "text": text,
         "label": label,
         "is_synthetic": is_synthetic,
         "text_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "source_id": None if source_id is None else str(source_id),
+        "source_category": source_category,
+        "source_dataset": source_dataset,
     }
 
 
@@ -131,14 +141,33 @@ def clean_records(records: list[dict[str, Any]]) -> pd.DataFrame:
         label = normalize_label(record.get("pattern_type"))
         if not text or label is None:
             continue
-        row = _row(text, label)
+        row = _row(
+            text,
+            label,
+            source_id=record.get("source_id", record.get("page_id")),
+            source_category=record.get(
+                "source_category", record.get("Pattern Category")
+            ),
+            source_dataset=record.get("source_dataset"),
+        )
         if row["text_hash"] not in seen:
             rows.append(row)
             seen.add(row["text_hash"])
     rows = inject_normal_samples(rows)
     if not rows:
         raise ValueError("No valid labeled, non-empty records remained after cleaning")
-    return pd.DataFrame(rows, columns=("text", "label", "is_synthetic", "text_hash"))
+    return pd.DataFrame(
+        rows,
+        columns=(
+            "text",
+            "label",
+            "is_synthetic",
+            "text_hash",
+            "source_id",
+            "source_category",
+            "source_dataset",
+        ),
+    )
 
 
 def clean_dataset(

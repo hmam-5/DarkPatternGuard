@@ -15,6 +15,13 @@ IGNORED_DIRS = {
     "__pycache__",
     ".pytest_cache",
     ".ruff_cache",
+    ".cache_d",
+    "cache",
+    "checkpoints",
+    "models",
+    "models_out",
+    "models_cache",
+    "huggingface_cache",
     "dist",
     "build",
 }
@@ -52,10 +59,15 @@ def main() -> int:
     ]
     env_files = [path for path in files_on_disk() if path.name == ".env"]
     git_available, tracked = tracked_files()
+    tracked_cache_files = [
+        path for path in tracked if ".cache_d" in path.relative_to(ROOT).parts
+    ]
     tracked_forbidden = [
         path
         for path in tracked
-        if path.suffix.lower() in FORBIDDEN_SUFFIXES or path.name == ".env"
+        if path.suffix.lower() in FORBIDDEN_SUFFIXES
+        or path.name == ".env"
+        or path in tracked_cache_files
     ]
     documented_candidates = [
         path
@@ -76,10 +88,16 @@ def main() -> int:
     if not git_available:
         print("Git tracking check: SKIPPED (workspace is not a Git checkout)")
     else:
-        print(f"Tracked forbidden files: {len(tracked_forbidden)}")
+        print(
+            f"Tracked forbidden files or .cache_d contents: "
+            f"{len(tracked_forbidden)}"
+        )
         for path in tracked_forbidden:
             print(f"  FORBIDDEN TRACKED: {path.relative_to(ROOT)}")
-    print(f"Forbidden weights present on disk: {len(present_forbidden)}")
+    print(
+        "Forbidden weights outside ignored local artifact/cache directories: "
+        f"{len(present_forbidden)}"
+    )
     for path in present_forbidden:
         print(f"  FORBIDDEN PRESENT: {path.relative_to(ROOT)}")
     print(f".env files present on disk: {len(env_files)}")

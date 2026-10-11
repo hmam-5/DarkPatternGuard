@@ -47,3 +47,29 @@ def test_splits_have_no_overlap_and_match_manifest(tmp_path: Path) -> None:
             str(label): int(count)
             for label, count in frame["label"].value_counts().items()
         }
+
+
+def test_source_pages_are_kept_in_one_partition(tmp_path: Path) -> None:
+    records = [
+        {
+            "text": f"{label} example from page {page_id}",
+            "pattern_type": label,
+            "source_id": str(page_id),
+            "source_category": label,
+        }
+        for page_id in range(40)
+        for label in ("Urgency", "Scarcity", "Social Proof", "Normal")
+    ]
+    cleaned = tmp_path / "cleaned.csv"
+    clean_records(records).to_csv(cleaned, index=False)
+    output = tmp_path / "grouped_artifacts"
+    manifest = write_split_artifacts(cleaned, output, seed=1729)
+    frames = [
+        pd.read_csv(output / f"{name}.csv") for name in ("train", "val", "test")
+    ]
+    source_ids = [set(frame["source_id"]) for frame in frames]
+
+    assert manifest["grouped_by_source_id"] is True
+    assert not source_ids[0] & source_ids[1]
+    assert not source_ids[0] & source_ids[2]
+    assert not source_ids[1] & source_ids[2]

@@ -1,74 +1,74 @@
 {
   "classification_report": {
     "Normal": {
-      "f1-score": 1.0,
-      "precision": 1.0,
+      "f1-score": 0.9888475836431226,
+      "precision": 0.9779411764705882,
       "recall": 1.0,
-      "support": 5.0
+      "support": 133.0
     },
     "Scarcity": {
-      "f1-score": 1.0,
+      "f1-score": 0.9428571428571428,
       "precision": 1.0,
-      "recall": 1.0,
-      "support": 5.0
+      "recall": 0.8918918918918919,
+      "support": 37.0
     },
     "Social Proof": {
-      "f1-score": 1.0,
+      "f1-score": 0.9666666666666667,
       "precision": 1.0,
-      "recall": 1.0,
-      "support": 5.0
+      "recall": 0.9354838709677419,
+      "support": 31.0
     },
     "Urgency": {
-      "f1-score": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "support": 5.0
+      "f1-score": 0.8717948717948718,
+      "precision": 0.8095238095238095,
+      "recall": 0.9444444444444444,
+      "support": 18.0
     },
-    "accuracy": 1.0,
+    "accuracy": 0.9680365296803652,
     "macro avg": {
-      "f1-score": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "support": 20.0
+      "f1-score": 0.9425415662404509,
+      "precision": 0.9468662464985994,
+      "recall": 0.9429550518260196,
+      "support": 219.0
     },
     "weighted avg": {
-      "f1-score": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "support": 20.0
+      "f1-score": 0.9683169738320729,
+      "precision": 0.9709479682283871,
+      "recall": 0.9680365296803652,
+      "support": 219.0
     }
   },
-  "ece": 0.546383248269558,
-  "macro_f1": 1.0,
+  "ece": 0.08015341750563007,
+  "macro_f1": 0.9425415662404509,
   "macro_f1_bootstrap_95_ci": {
-    "lower": 1.0,
-    "upper": 1.0
+    "lower": 0.8956140008020452,
+    "upper": 0.9778879374066881
   },
-  "micro_f1": 1.0,
+  "micro_f1": 0.9680365296803652,
   "per_class": {
     "Normal": {
-      "f1": 1.0,
-      "precision": 1.0,
+      "f1": 0.9888475836431226,
+      "precision": 0.9779411764705882,
       "recall": 1.0,
-      "support": 5
+      "support": 133
     },
     "Scarcity": {
-      "f1": 1.0,
+      "f1": 0.9428571428571428,
       "precision": 1.0,
-      "recall": 1.0,
-      "support": 5
+      "recall": 0.8918918918918919,
+      "support": 37
     },
     "Social Proof": {
-      "f1": 1.0,
+      "f1": 0.9666666666666667,
       "precision": 1.0,
-      "recall": 1.0,
-      "support": 5
+      "recall": 0.9354838709677419,
+      "support": 31
     },
     "Urgency": {
-      "f1": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "support": 5
+      "f1": 0.8717948717948718,
+      "precision": 0.8095238095238095,
+      "recall": 0.9444444444444444,
+      "support": 18
     }
   }
 }

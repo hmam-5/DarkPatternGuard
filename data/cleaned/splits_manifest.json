@@ -1,0 +1,48 @@
+{
+  "class_counts": {
+    "Normal": 1163,
+    "Scarcity": 349,
+    "Social Proof": 312,
+    "Urgency": 205
+  },
+  "class_weights_path": "class_weights.json",
+  "fractions": {
+    "test": 0.1,
+    "train": 0.8,
+    "val": 0.1
+  },
+  "grouped_by_source_id": true,
+  "seed": 1729,
+  "splits": {
+    "test": {
+      "class_counts": {
+        "Normal": 133,
+        "Scarcity": 37,
+        "Social Proof": 31,
+        "Urgency": 18
+      },
+      "rows": 219
+    },
+    "train": {
+      "class_counts": {
+        "Normal": 915,
+        "Scarcity": 280,
+        "Social Proof": 252,
+        "Urgency": 163
+      },
+      "rows": 1610
+    },
+    "val": {
+      "class_counts": {
+        "Normal": 115,
+        "Scarcity": 32,
+        "Social Proof": 29,
+        "Urgency": 24
+      },
+      "rows": 200
+    }
+  },
+  "synthetic_rows": 0,
+  "total_rows": 2029,
+  "unique_source_ids": 956
+}

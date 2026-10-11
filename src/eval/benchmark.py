@@ -103,7 +103,8 @@ def write_calibration_plot(results_dir: Path) -> None:
     figure, axis = plt.subplots(figsize=(7, 6))
     for model, _, path in _prediction_files(results_dir):
         frame = pd.read_csv(path)
-        probabilities = frame[PROBABILITY_COLUMNS].to_numpy()
+        probability_columns = list(PROBABILITY_COLUMNS)
+        probabilities = frame[probability_columns].to_numpy()
         confidence = probabilities.max(axis=1)
         correct = (
             np.asarray(LABELS)[probabilities.argmax(axis=1)] == frame["true_label"]
@@ -164,7 +165,10 @@ def write_error_analysis(results_dir: Path = Path("results")) -> None:
     }
     if not prediction_sets:
         raise FileNotFoundError("No predictions available for error analysis")
+    for frame in prediction_sets.values():
+        frame["id"] = frame["id"].astype(str)
     test_path = Path("data/cleaned/test.csv")
+    source = None
     if test_path.is_file():
         source = pd.read_csv(test_path)
         source["id"] = source.index.astype(str)
@@ -181,12 +185,15 @@ def write_error_analysis(results_dir: Path = Path("results")) -> None:
     ]
     for model, frame in prediction_sets.items():
         predicted = np.asarray(LABELS)[
-            frame[PROBABILITY_COLUMNS].to_numpy().argmax(axis=1)
+            frame[list(PROBABILITY_COLUMNS)].to_numpy().argmax(axis=1)
         ]
         errors = frame.loc[predicted != frame["true_label"]].copy()
         errors["predicted"] = predicted[predicted != frame["true_label"]]
+        text_column = "text" if "text" in errors.columns else None
         errors["text_length"] = (
-            errors["text"].fillna(errors["id"]).astype(str).str.len()
+            (errors[text_column].fillna(errors["id"]) if text_column else errors["id"])
+            .astype(str)
+            .str.len()
         )
         lines.append(f"### {model}")
         if errors.empty:
@@ -215,37 +222,91 @@ def write_error_analysis(results_dir: Path = Path("results")) -> None:
     llm = prediction_sets.get("llm_gpt4o_mini")
     if baseline is not None:
         lines.extend(["## Baseline failures recovered by novel models", ""])
-        baseline_pred = np.asarray(LABELS)[
-            baseline[PROBABILITY_COLUMNS].to_numpy().argmax(axis=1)
-        ]
-        candidates = []
-        for alternative_name, alternative in (("DeBERTa", novel), ("GPT-4o-mini", llm)):
+        candidates: dict[tuple[str, str, str, str, str, str], list[int]] = {}
+        alternatives = (
+            ("DeBERTa", "finetune_deberta", novel),
+            ("GPT-4o-mini", "llm_gpt4o_mini", llm),
+        )
+        for alternative_name, model_name, alternative in alternatives:
             if alternative is None:
                 continue
-            alternative_pred = np.asarray(LABELS)[
-                alternative[PROBABILITY_COLUMNS].to_numpy().argmax(axis=1)
-            ]
-            recovered = (baseline_pred != baseline["true_label"].to_numpy()) & (
-                alternative_pred == baseline["true_label"].to_numpy()
-            )
-            for index in np.flatnonzero(recovered):
-                candidates.append(
-                    (
+            for seed in configured_seeds():
+                baseline_path = (
+                    results_dir / "finetune_bert" / f"seed{seed}" / "preds.csv"
+                )
+                alternative_path = (
+                    results_dir / model_name / f"seed{seed}" / "preds.csv"
+                )
+                if not baseline_path.is_file() or not alternative_path.is_file():
+                    continue
+                baseline_seed = pd.read_csv(baseline_path)
+                alternative_seed = pd.read_csv(alternative_path)
+                baseline_seed["id"] = baseline_seed["id"].astype(str)
+                alternative_seed["id"] = alternative_seed["id"].astype(str)
+                aligned = baseline_seed.merge(
+                    alternative_seed,
+                    on="id",
+                    how="inner",
+                    suffixes=("_bert", "_alternative"),
+                    validate="one_to_one",
+                )
+                if aligned.empty:
+                    raise ValueError(
+                        f"{alternative_name} and BERT have no shared test IDs "
+                        f"for seed {seed}"
+                    )
+                if not np.array_equal(
+                    aligned["true_label_bert"], aligned["true_label_alternative"]
+                ):
+                    raise ValueError(
+                        f"{alternative_name} and BERT disagree on shared test labels "
+                        f"for seed {seed}"
+                    )
+                if source is not None:
+                    aligned = aligned.merge(
+                        source, on="id", how="left", validate="many_to_one"
+                    )
+                true_labels = aligned["true_label_bert"].to_numpy()
+                baseline_pred = np.asarray(LABELS)[
+                    aligned[[f"{column}_bert" for column in PROBABILITY_COLUMNS]]
+                    .to_numpy()
+                    .argmax(axis=1)
+                ]
+                alternative_pred = np.asarray(LABELS)[
+                    aligned[[f"{column}_alternative" for column in PROBABILITY_COLUMNS]]
+                    .to_numpy()
+                    .argmax(axis=1)
+                ]
+                recovered = (baseline_pred != true_labels) & (
+                    alternative_pred == true_labels
+                )
+                for index in np.flatnonzero(recovered):
+                    row = aligned.iloc[index]
+                    text = (
+                        str(row["text"])
+                        if "text" in aligned.columns and pd.notna(row["text"])
+                        else "(text unavailable in saved results)"
+                    )
+                    text = (
+                        text.replace("\r", " ").replace("\n", " ").replace("|", "\\|")
+                    )
+                    candidate = (
                         alternative_name,
-                        baseline.iloc[index]["id"],
-                        baseline.iloc[index]["true_label"],
+                        row["id"],
+                        text,
+                        true_labels[index],
                         baseline_pred[index],
                         alternative_pred[index],
                     )
-                )
+                    candidates.setdefault(candidate, []).append(seed)
         lines.append(
             "| Alternative | ID | Original text | True label | "
-            "BERT prediction | Alternative prediction |"
+            "BERT prediction | Alternative prediction | Seed(s) |"
         )
-        lines.append("| --- | --- | --- | --- | --- | --- |")
-        for row in candidates[:10]:
-            text = str(baseline.loc[baseline["id"] == row[1], "text"].iloc[0])
-            lines.append("| " + " | ".join(map(str, (*row, text))) + " |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+        for candidate, seeds in list(candidates.items())[:10]:
+            row = (*candidate, ", ".join(map(str, seeds)))
+            lines.append("| " + " | ".join(map(str, row)) + " |")
         if len(candidates) < 5:
             lines.append("")
             lines.append(

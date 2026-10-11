@@ -1,0 +1,6 @@
+model,mean_macro_f1,std_macro_f1,mean_ci_lower,mean_ci_upper,params_count,train_time_seconds,inference_ms_per_sample,llm_usd_per_1k_texts,mean_pm_std
+bilstm,0.8888888888888888,0.19245008972987532,0.8541666666666666,0.9102564102564102,,,,,0.8889 ± 0.1925
+cnn,1.0,0.0,1.0,1.0,,,,,1.0000 ± 0.0000
+finetune_bert,0.8095238095238094,0.17169291787923766,0.7238095238095239,0.8797619047619047,,,,,0.8095 ± 0.1717
+finetune_deberta,1.0,,1.0,1.0,,,,,1.0000
+small_transformer,1.0,0.0,1.0,1.0,,,,,1.0000 ± 0.0000
